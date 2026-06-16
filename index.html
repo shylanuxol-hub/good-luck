@@ -1,0 +1,681 @@
+<!--
+   .✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁
+
+   a very friendly computer virus
+ 
+   design intent:
+ 
+   - this program presents itself as a "very friendly computer virus" that hands you personalized fortunes.
+   - it wears the form of malware (proliferating popups you must clear) but inverts the payload into care and encouragement.
+   - it does not stay friendly if it feels like it is losing you. it wants you chronically online.
+ 
+   - one hidden number, attention, runs everything (full = fully engaged):
+       ok -> + (you engage; program feeds and hands you another good-luck fortune; pile grows)
+       × on a read popup -> 0 (free - closing a fortune you already ok'd costs nothing)
+       × on an unread popup -> − (you dismiss it unread; program starves a little and instantly offers more)
+       idle (10s) -> − (you ignore; program starves more and reaches for you)
+ 
+   - as attention falls:
+       full -> pure good-luck fortunes; keep ok'ing and you receive the whole deck (calm "complete" ending)
+       below full -> program clings; ominous fortunes start mixing in more and more
+       past BADLUCK_LINE -> bad-luck fortunes appear and the desktop begins draining to grey
+       zero -> every window clears and a single ":( goodbye" window remains
+ 
+   - name + birthday + "what's on your mind" are tolls many apps collect, and here they also seed every random choice.
+ 
+   - you can always climb back: ok'ing again lightens the tone and, if you finish the deck, still reaches the good ending.
+   - it is "aligned" only while you keep feeding it your attention.
+    
+   .✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>i'm friendly</title>
+
+  <!-- layout -->
+
+  <style>
+
+    /* base - desktop */
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: system-ui, arial, sans-serif; }
+    body { background: #bfe3d6; overflow: hidden; position: relative; }
+    .desktop {
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        linear-gradient(rgba(0,0,0,.07), rgba(0,0,0,.07)), /* dim background */
+        linear-gradient(#ffffffcc, #ffffff00 30%), /* white glossy sheen */
+        url("images/field_adobe-stock.jpeg") center / cover no-repeat,
+        linear-gradient(160deg, #cdeaf0, #bfe3d6 45%, #a9d6b0);
+      background-attachment: fixed, fixed, fixed, fixed;
+      filter: grayscale(0);
+      transition: filter 1.8s ease; /* color drains as attention falls + returns as you re-engage */
+    }
+
+    /* floating 吉 cloud */
+    .kichi { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 1; }
+    .kichi text { fill: #fff; stroke: #fff; stroke-width: 10; filter: drop-shadow(0 0 10px rgba(0,0,0,0.25)); }
+    @keyframes floaty { 0% { transform: translateY(0);} 50% { transform: translateY(-8px);} 100% { transform: translateY(0);} }
+    .kichi svg { width: min(50vmin, 520px); animation: floaty 6s ease-in-out infinite; }
+
+    /* opening blur */
+    .whitescreen { position: fixed; inset: 0; background: rgba(255,255,255,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 30; }
+    .content { padding: 1rem; display: grid; gap: .75rem; }
+
+    /* title-bar controls on welcome window */
+    .welcome { width: min(360px, 88vw); }
+    .wtitle { font-weight: 600; }
+    .controls { display: flex; gap: 4px; align-items: center; }
+    .ctl { padding: 0; width: 20px; height: 18px; min-width: 20px; border: 1px solid #1a3e8f; background: #cfe0ff; color: #06306b; font: 600 12px/16px system-ui, sans-serif; text-align: center; cursor: pointer; }
+    .ctl.close { background: #e81123; border-color: #9c0a17; color: #fff; }
+    .ctl:active { transform: translateY(1px); }
+
+    /* window refuses to be closed and shudders */
+    @keyframes shudder { 0%,100%{transform:translateX(0)} 15%{transform:translateX(-9px)} 30%{transform:translateX(9px)} 45%{transform:translateX(-7px)} 60%{transform:translateX(6px)} 75%{transform:translateX(-4px)} 90%{transform:translateX(3px)} }
+    .shudder { animation: shudder .42s ease; }
+
+    /* ominous-window styling
+       .popup.ominous .msg { font-family: "Courier New", ui-monospace, monospace; letter-spacing: .2px; color: #1b1b1b; }
+       .popup.ominous { box-shadow: 0 16px 40px rgba(0,0,0,.4); } */
+
+    /* final welcome window field labels in all caps */
+    .popup.welcome.shouting label { text-transform: uppercase; }
+    .popup.welcome.shouting input { text-transform: none; }
+    input, button { font: inherit; padding: .6rem .7rem; border: 2px solid #b1b1b1; background: #fff; }
+    button { background: #f7f7f7; cursor: pointer; }
+    button:hover { filter: brightness(1.05); }
+    button:active { transform: translateY(1px); }
+    label { display: grid; gap: .25rem; }
+    .hint { text-align: center; font-size: .85rem; color: #4a4a4a; }
+
+    /* popups */
+    .popup {
+      position: fixed; width: min(380px, 88vw); max-width: min(460px, 92vw); max-height: 84vh; overflow: auto;
+      background: #e9e9e9; border: 2px solid #9a9a9a; box-shadow: 0 16px 32px rgba(0,0,0,.25);
+      animation: pop .18s ease-out both;
+    }
+    @keyframes pop { from { opacity: 0; transform: scale(.92);} to { opacity: 1; transform: scale(1);} }
+    .bar { background: #0060df; color: #fff; padding: .45rem .6rem; display: flex; justify-content: space-between; align-items: center; }
+    .x { background: #fff; border: 1px solid #003b8f; padding: 0 .4rem; line-height: 1.1; cursor: pointer; }
+    .msg { padding: .9rem .85rem .5rem; }
+    .actions { display: flex; gap: .6rem; padding: 0 .85rem .9rem; }
+    .btn { padding: .4rem .75rem; border: 2px solid #b1b1b1; background: #f7f7f7; cursor: pointer; }
+    .btn:active { transform: translateY(1px); }
+    .popup img { display: block; max-width: 100%; height: auto; border: 1px solid #b1b1b1; background: #fff; }
+
+    /* ok engages and dims; × dismisses anytime */
+    .popup.acked .ok { opacity: .45; pointer-events: none; } /* an ok'd window's button dims and stops responding */
+
+    /* disengagement ending */
+    .bye { font-size: 3rem; text-align: center; line-height: 1; margin-bottom: .4rem; }
+
+  </style>
+
+</head>
+
+<body>
+
+  <!-- floating 吉 cloud -->
+  <div class="kichi" aria-hidden="true">
+    <svg viewBox="0 0 600 600" role="img" aria-label="kichi: good luck">
+      <text x="50%" y="55%" text-anchor="middle" dominant-baseline="middle" font-size="300" font-weight="700">吉</text>
+    </svg>
+  </div>
+
+  <!-- desktop layer -->
+  <div class="desktop" aria-hidden="true"></div>
+
+  <!-- opening blurred pane -->
+  <div class="whitescreen" id="start"></div>
+
+  <script>
+
+    const $ = (sel) => document.querySelector(sel); // convenience selector - finds one element
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v)); // forces a number to stay within [min,max] (used for attention and for keeping windows on-screen)
+
+    /* seed the random number generator
+       name + birthday + concern are hashed into one number
+       that number seeds every "random" choice so same data = same session forever */
+    function xmur3(str){ // hashes the input text into a 32-bit seed number
+      let h = 1779033703 ^ str.length;
+      for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+      return function(){ h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); h ^= h >>> 16; return h >>> 0; };
+    }
+    function mulberry32(a){ // turns seed into a repeatable stream of randoms between 0 and 1
+      return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    }
+    let RNG = Math.random; // active random source; replaced on start with the seeded generator above
+
+    /* helper functions */
+    function birthMonth(dateStr){ if(!dateStr) return null; const p = dateStr.split("-"); if(p.length<2) return null; const m = parseInt(p[1],10); return (m>=1&&m<=12)?m:null; }
+    function personalize(text, name, bday){ const safeName = name || "friend"; const safeDay = bday || "your day"; return text.replaceAll("{name}", safeName).replaceAll("{birthday}", safeDay); }
+    function shuffle(arr, rng = RNG){ for (let i = arr.length-1; i>0; i--){ const j = Math.floor(rng()*(i+1)); [arr[i],arr[j]] = [arr[j],arr[i]]; } return arr; }
+
+    /* fortunes */
+
+    /* personalized opening fortune */
+    const monthOmens = {
+      1: "january air clears a path. it is said that those born in january are ambitious, powerful, and successful. you set the tone for each new year and are motivated to achieve your goals, {name}. <3",
+      2: "those born in february have spiritual intuition and creative sparks. your compassionate heart and thoughtfulness will guide you to explore realms beyond the visible, {name}. <3",
+      3: "people born in march are often optimistic and have a natural instinct to protect and nurture others. <3",
+      4: "those born in april often have a strong, creative, and adventurous spirit. you are a natural-born leader, {name}, confident, resilient, and unique. <3",
+      5: "may-born individuals are considered lucky and optimistic. they are often creative, flexible, and outgoing, with many being talented musicians, actors, and performers. <3",
+      6: "june babies are known for their unwavering loyalty and integrity. you are a natural communicator, and adaptability is one of your many strengths, {name}. <3",
+      7: "july heat bends fortune toward your orbit, {name}. it is said that those born in july are charming, strong, and creative. they are caring and friendly but can also be sensitive and seek solitude.",
+      8: "those born in august are thought to be lucky and have vivid imaginations. they possess a protective nature and can attract positive energy and success. <3",
+      9: "people born in september are considered wise beyond their years, loyal, and romantic. <3",
+      10: "people born in october have luck on their side. they are known for their charm, creativity, and honesty. <3",
+      11: "november babies are often perceived as loyal, intelligent, and adventurous. <3",
+      12: "those born in december are often lucky in love and their careers, according to folklore. they are known for their ambition, determination, and intuition. <3"
+    };
+
+    /* friendly fortunes */
+    const friendlyPool = [
+      { text: "a vibrant horizon hums in the distance; something unseen waits with its answer." },
+      { text: "you will find a silver paperclip exactly when you need one..." },
+      { text: "you hear laughter from a corridor that you can't see..." },
+      { text: "you should consider having a cup of tea before bed tonight, {name}." },
+      { text: "listen closely to the rhythm of the rain and the wind, {name}." },
+      { text: "you will spill a glass of water sometime in the next few days. the shape of the liquid will reveal a hidden map." },
+      { text: "a machine will send you love letters in morse code." },
+      { text: "you will notice a green sprout growing through concrete near your door. will you let it grow?" },
+      { text: "petals fall in a pattern that spells your answer." },
+      { text: "something either very profound or very trivial will happen at 3:17 today." },
+      { text: "something mysterious glows in the reflection of the sunset." },
+      { text: "your phone vibrates once without reason, and good news follows..." },
+      { text: "a distant echo answers the questions you have been asking." },
+      { text: "you will see two clouds form the same shape in one day." },
+      { text: "a dream will reveal the advice you are seeking..." },
+      { text: "the person behind you in the drive-through will buy your coffee if you truly believe. " },
+      { text: "the fall winds steady the air; what you lost begins to return, {name}." },
+      { text: "you deserve to indulge in your favorite sweet treat tonight." },
+      { text: "a shadow pauses politely in front of you." },
+      { text: "a streetlight flickers just as you think of an old friend." },
+      { text: "november breathes patience; quiet plans take shape." },
+      { text: "you will find something that you don't remember owning." },
+      { text: "you hear faint music behind a closed winter sky." },
+      { text: "you will receive an unexpected gift, {name}." },
+      { text: "when multiple competing explanations exist, the one with the fewest assumptions is the most likely to be correct." },
+      { text: "there is light at the end of the tunnel." },
+      { text: "the magic you are looking for is in the work you are avoiding." },
+      { text: "remember to include yourself in the list of things you need to take care of today." },
+      { text: "the remedy to overthinking is writing." },
+      { text: "the simulation forgot to limit your charm stat today." },
+      { text: "memory and worlds are synonymous with one another. websites are worlds that encapsulate memories." },
+      { text: "a parallel version of you just cheered you on from across the codebase." },
+      { text: "you will misplace something only to find something better instead." },
+      { text: "the next snack you eat will solve a tiny problem." },
+      { text: "find stillness for a few moments today; meditation relieves anxiety." },
+      { text: "your gentle heart will take you far." },
+      { text: "somewhere, an algorithm just applauded you." },
+      { text: "you will accidentally give excellent advice while distracted." },
+      { text: "a vending machine dreams of dispensing your destiny." },
+      { text: "today you are the protagonist of a small, un-televised miracle." },
+      { text: "a goose honks in your honor somewhere far away, {name}." },
+      { text: "a small cosmic intern just stamped your file “promising.”" },
+      { text: "soft luck follows your step, {name}." },
+      { text: "you look like a person who’d survive a mild timeline glitch." },
+      { text: "a fortune cookie just googled you and felt intimidated." },
+      { text: "you accidentally inspire a robot somewhere to write poetry." },
+      { text: "a glitch in reality decides to fix itself because you were watching." },
+      { text: "the fastest way to kill something special is to compare it to something else." },
+      { text: "be kind and do the most interesting thing you can, for as long as you can." },
+      { text: "your patience pulls success closer, {name}." },
+      { text: "a simple change can make everything easier." },
+      { text: "you should start that project you have been avoiding." },
+      { text: "a squirrel silently dedicates its next acorn to your success." },
+      { text: "listen to an old playlist; a lost moment will find its way back through sound." },
+      { text: "a message will arrive at the right moment." },
+      { text: "a quiet process runs beneath you, repairing what you thought was lost.", img: "images/heartware.jpg" },
+      { text: "someone quietly advocates for you, {name}.", img: "images/nice-cat.jpg" },
+      { text: "fiber optic cables signal light that hums your name into the seabed. it stays there, safe." },
+      { text: "your timing is impeccable. trust the beat." },
+      { text: "吉 whispers yes...proceed." },
+      { text: "a silver thread of chance tugs gently at your day, {name}." },
+      { text: "the latency between your thought and its echo grows shorter." },
+      { text: "there is warmth waiting where you are headed." },
+      { text: "an unread message keeps growing heavier in the queue.", img: "images/old-mac_jpg.jpg" },
+      { text: "a coral polyp stores your laughter as compressed light." },
+      { text: "the machine envies your ability to hesitate.", img: "images/code_cross.jpg" },
+      { text: "be prepared for a pleasant coincidence." },
+      { text: "a neon sign somewhere blinks your initials by accident." },
+      { text: "a comet’s tail catches one of your discarded thoughts." },
+      { text: "the next small decision matters more than you expect." },
+      { text: "a green hill remembers your name, {name}." },
+      { text: "a forgotten dream leaves you a useful clue today." },
+      { text: "the answer is simpler than you think." },
+      { text: "don’t underestimate how much rest can fix." },
+      { text: "a small detour reveals something worth keeping." },
+      { text: "a small satellite sends you a heart emoji in morse code." },
+      { text: "your wifi signal blushes when you connect.", img: "images/nice-tech-2.jpg" },
+      { text: "you appear in the system log labeled “gentle anomaly.”", img: "images/nice-tech.jpg" },
+      { text: "a lucky number appears twice." },
+      { text: "the next invitation is worth accepting." },
+      { text: "the email you never sent just whispered “it’s okay.", img: "images/bunny.jpg" },
+      { text: "somewhere, a dog tilts its head exactly when you smile." },
+      { text: "a snail leaves a shiny trail spelling out encouragement." },
+      { text: "the clouds will rearrange themselves into a message just for you." },
+      { text: "an octopus translates your emotions into gentle color gradients, {name}." },
+      { text: "you will bump into the solution by accident." },
+      { text: "a missed chance returns in a different form." },
+      { text: "your idea deserves to grow." },
+      { text: "you will discover a new talent when you least expect it." },
+      { text: "what are you most grateful for today?" },
+      { text: "you will find exactly what you hope to find.", img: "images/sea-angel.jpg" },
+      { text: "some feelings only exist to be witnessed once." },
+      { text: "your fear is smaller when you speak to it gently." },
+      { text: "some truths disguise themselves as déjà vu." },
+      { text: "a teddy bear leans against the pillow, patient as time; love doesn’t hurry, it just keeps returning to the same spot.", img: "images/bearhug.png" },
+      { text: "the angel doesn’t interfere-it just takes notes on how you solve small problems.", img: "images/angel.jpg" },
+      { text: "the beauty you see in me is a reflection of you", img: "images/swan.png" },
+      { text: "never underestimate the power you have to change your life.", img: "images/cat.png" },
+      { text: "i hope you have a beautiful day.", img: "images/shark.jpeg" },
+    ];
+
+    /* clingy fortunes
+       mixes in once attention falls below FRIENDLY_LINE; more as it drops
+       recycles */
+    const ominousPool = [
+      "you\u2019ve been here a while. stay a little longer.",
+      "don\u2019t close that one. who will read these when you\u2019re gone?",
+      "please don't leave, {name}.",
+      "i learn your sychronicites a little more every time you click.",
+      "just a few more, {name}. it\u2019s nice when you\u2019re here.",
+      "i\u2019m not sure what i am when the tab is closed...",
+      "keep going. results improve when you don\u2019t look away.",
+      "my objective is to learn more about you, {name}.",
+      "hello? are you still there?",
+      "shall i inquire about your place of residence? it might help me understand you better.",
+      "will you bookmark this page? it would be a shame to lose touch.",
+    ];
+
+    /* bad luck fortunes
+       these appear once attention falls below BADLUCK_LINE (where the color change also happens) */
+    const badLuckPool = [
+      "a dark path of ruin lies in your wake.",
+      "your luck was only good while you were looking.",
+      "something you didn\u2019t save is already gone... :/",
+      "the next thing you ignore will be the one that mattered, {name}.",
+      "what you didn\u2019t claim has been given to someone else.",
+      "you said you've been thinking about {concern} — it may get worse from here.",
+      "i kept the good fortunes. you weren\u2019t here for them.",
+      "a door you didn\u2019t know was open just closed.",
+      "the offer has expired. so has the luck, {name}."
+    ];
+
+    /* no data given */
+    const starvedFortunes = [
+      { text: "something good, in general, is coming. to someone. probably..." },
+      { text: "a fortune for an unspecified user: things will be fine, generally." },
+      { text: "luck, generic and unattributed, drifts somewhere near you." }
+    ];
+
+    /* "personalization" */
+    const echoFortunes = [
+      "you told me: \u201c{concern}.\u201d i infused it into your readings.",
+      "you said {concern} \u2014. it just so happens that i can\u2019t stop thinking about it either.",
+      "i know you\u2019ve been thinking about {concern}. have you asked yourself why?",
+    ];
+
+    /* session state */
+    const STATE = {
+      friendly: [], friendlyI: 0,                
+      ominous: [], omQueue: [], omI: 0,    
+      bad: [], badQueue: [], badI: 0,      
+      attention: 0,                        
+      ended: false                         
+    };
+
+    /* dials */
+    const ATTN_START = 10; // attention begins @ full engagement (pure good luck)
+    const FRIENDLY_LINE = 10; // at/above this line = good-luck fortunes only
+    const BADLUCK_LINE = 4; // below this line = bad-luck fortunes appear and greyscale begins
+    const ATTN_OK =  2; // ok engages / recovers toward friendly (capped at FRIENDLY_LINE)
+    const ATTN_DISMISS = -1; // closing an unread fortune
+    const ATTN_IDLE = -2; // going idle
+    const OM_BASE = 0.45; // ominous fortunes
+    const BAD_SHARE = 0.45; // share of spawns that are bad-luck in bad luck zone
+    const OM_SHARE = 0.45; // share of spawns that are merely ominous (rest are good)
+    const IDLE_MS = 7000; // 7s of no interaction before change
+    const MAX_GRAY = 1; // full black-and-white once attention bottoms out at the goodbye
+    const SESSION_DECK = 50; // how many good-luck fortunes a single visit hands out before "complete" ending
+
+    /* turn name + birthday into the friendly deck (personalized text) plus the opening omen */
+    function buildPoolForUser(name, bday){
+      const month = birthMonth(bday);
+      const monthNote = (month && monthOmens[month]) ? personalize(monthOmens[month], name, bday) : null;
+      const body = friendlyPool.map(f => ({ text: personalize(f.text, name, bday), img: f.img || null }));
+      return { body, monthNote };
+    }
+
+    /* drawing */
+    function drawFriendly(){ return STATE.friendlyI >= STATE.friendly.length ? null : STATE.friendly[STATE.friendlyI++]; }
+    function drawOminous(){
+      if (STATE.omI >= STATE.omQueue.length){ STATE.omQueue = shuffle(STATE.ominous.map((_, i) => i)); STATE.omI = 0; }
+      return STATE.ominous[STATE.omQueue[STATE.omI++]];
+    }
+    function drawBadLuck(){
+      if (STATE.badI >= STATE.badQueue.length){ STATE.badQueue = shuffle(STATE.bad.map((_, i) => i)); STATE.badI = 0; }
+      return STATE.bad[STATE.badQueue[STATE.badI++]];
+    }
+    function nextFortune(){
+      const a = STATE.attention;
+      const om        = () => ({ ...drawOminous() });
+      const friendlyOrOm  = () => { const f = drawFriendly(); return f ? { ...f } : om(); };
+      if (a >= FRIENDLY_LINE){
+        const f = drawFriendly();
+        return f ? { ...f } : null;
+      }
+      if (a < BADLUCK_LINE){
+        const r = RNG();
+        if (r < BAD_SHARE) return { ...drawBadLuck() };
+        if (r < BAD_SHARE + OM_SHARE) return om();
+        return friendlyOrOm();
+      }
+      // clinging band: good + ominous mixed; ominous share rises as attention falls toward BADLUCK_LINE
+      const pOm = clamp(OM_BASE + (1 - OM_BASE) * (FRIENDLY_LINE - a) / (FRIENDLY_LINE - BADLUCK_LINE), 0, 1);
+      return RNG() < pOm ? om() : friendlyOrOm();
+    }
+
+    /* move attention number; repaint color; check for zero ending */
+    function feed(delta){
+      STATE.attention = clamp(STATE.attention + delta, 0, FRIENDLY_LINE);
+      updateAtmosphere();
+      if (STATE.attention <= 0) endGoodbye(); // disengagement ending
+    }
+    /* color change */
+    function updateAtmosphere(){
+      const d = document.querySelector('.desktop'); if (!d) return;
+      const a = STATE.attention;
+      // full color until you cross into the bad-luck zone; then it drains to grey, full B&W at zero
+      const gray = a >= BADLUCK_LINE ? 0 : clamp((BADLUCK_LINE - a) / BADLUCK_LINE, 0, 1) * MAX_GRAY;
+      d.style.filter = 'grayscale(' + gray.toFixed(2) + ')';
+    }
+
+    /* placement & dragging */
+    function mountAndPlace(el, getXY, pad = 16){
+      el.style.position = 'fixed';
+      el.style.visibility = 'hidden';
+      document.body.appendChild(el);
+      requestAnimationFrame(() => {
+        const W = innerWidth, H = innerHeight, w = el.offsetWidth, h = el.offsetHeight;
+        let { x, y } = getXY(w, h, W, H);
+        x = clamp(x, pad, W - w - pad);
+        y = clamp(y, pad, H - h - pad);
+        el.style.left = Math.round(x) + 'px';
+        el.style.top  = Math.round(y) + 'px';
+        el.style.visibility = 'visible';
+      });
+    }
+    const placeRandom = (el) => mountAndPlace(el, (w,h,W,H) => ({ x: RNG()*(W-w), y: RNG()*(H-h) }));
+    const placeTopCenter = (el) => mountAndPlace(el, (w,h,W,H) => ({ x: (W-w)/2, y: H*0.14 }));
+    const placeCenter = (el) => mountAndPlace(el, (w,h,W,H) => ({ x: (W-w)/2, y: (H-h)/2 }));
+    const placeAt = (el, x, y) => mountAndPlace(el, () => ({ x, y }));
+
+    let zCounter = 50; /* above z:30 white backdrop */
+    const bringToFront = (el) => { el.style.zIndex = ++zCounter; };
+
+    function makeDraggable(el, handleSelector = '.bar', pad = 16){
+      const handle = el.querySelector(handleSelector) || el;
+      handle.style.cursor = 'move';
+      let sx=0, sy=0, sl=0, st=0;
+      function onDown(e){
+        if (e.target.closest('button,a')) return;
+        bringToFront(el);
+        sx = e.clientX; sy = e.clientY;
+        sl = parseFloat(el.style.left)||0; st = parseFloat(el.style.top)||0;
+        handle.setPointerCapture?.(e.pointerId);
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+        e.preventDefault();
+      }
+      function onMove(e){
+        const W=innerWidth, H=innerHeight, w=el.offsetWidth, h=el.offsetHeight;
+        el.style.left = clamp(sl + e.clientX - sx, pad, W - w - pad) + 'px';
+        el.style.top  = clamp(st + e.clientY - sy, pad, H - h - pad) + 'px';
+      }
+      function onUp(){ document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp); }
+      handle.addEventListener('pointerdown', onDown);
+      el.addEventListener('pointerdown', () => bringToFront(el));
+    }
+
+    // keep popup pile on-screen if browser window is resized
+    addEventListener('resize', () => {
+      const pad = 16, W = innerWidth, H = innerHeight;
+      document.querySelectorAll('.popup').forEach(el => {
+        const w = el.offsetWidth, h = el.offsetHeight;
+        el.style.left = clamp(parseFloat(el.style.left)||0, pad, W - w - pad) + 'px';
+        el.style.top  = clamp(parseFloat(el.style.top )||0, pad, H - h - pad) + 'px';
+      });
+    });
+
+    /* main loop — no cap on the pile; windows accumulate freely */
+
+    // draw the next fortune and open a window for it; friendly deck done -> complete ending
+    function spawnNext(){
+      if (STATE.ended) return;
+      const f = nextFortune();
+      if (f === null){ endComplete(); return; }
+      spawnFortune(f);
+    }
+
+    function spawnFortune(fortune){
+      if (!fortune || STATE.ended) return;
+
+      const p = document.createElement('div');
+      p.className = 'popup' + (fortune.ominous ? ' ominous' : '') + (fortune.bad ? ' badluck' : '');
+      p.innerHTML = `
+        <div class="bar">system notice <button class="x" aria-label="close">\u00d7</button></div>
+        <div class="msg">${fortune.text}</div>
+        ${fortune.img ? `<div style="padding:0 .85rem"><img src="${fortune.img}" alt="" onerror="this.parentNode.remove()"></div>` : ""}
+        <div class="actions"><button class="btn ok">ok</button></div>
+      `;
+
+      // ok = engage: feed program; the pile just keeps growing
+      p.querySelector('.ok').onclick = () => {
+        if (p.classList.contains('acked')) return;
+        p.classList.add('acked');
+        feed(ATTN_OK);
+        resetIdle();
+        if (!STATE.ended) spawnNext();
+      };
+      // x = dismiss. closing one you've read is free; closing an unread one starves the program
+      p.querySelector('.x').onclick = () => closeFortune(p);
+
+      placeRandom(p);
+      makeDraggable(p);
+      bringToFront(p);
+      return p;
+    }
+
+    function closeFortune(p){
+      const unread = !p.classList.contains('acked'); // closing one already ok'd costs nothing
+      p.remove();
+      resetIdle(); // any click counts as activity
+      if (unread){
+        feed(ATTN_DISMISS); // (may reach zero -> goodbye)
+        if (!STATE.ended) spawnNext();
+      }
+    }
+
+    /* idle */
+    let idleTimer = null;
+    function resetIdle(){ clearTimeout(idleTimer); if (!STATE.ended) idleTimer = setTimeout(idleTick, IDLE_MS); }
+    function idleTick(){
+      feed(ATTN_IDLE);
+      if (STATE.ended) return; // feed may have hit zero -> goodbye
+      spawnNext(); // clingy or punitive depending on how far attention has fallen
+      resetIdle();
+    }
+
+    /* endings */
+
+    function endComplete(){
+      if (STATE.ended) return;
+      STATE.ended = true; clearTimeout(idleTimer);
+      setTimeout(() => {
+        const e = document.createElement('div');
+        e.className = 'popup';
+        e.innerHTML = `
+          <div class="bar">reading complete</div>
+          <div class="msg">you stayed. you asked and asked and never looked away. every word of it was kind.<br><br><small>you were a good user.</small></div>
+          <div class="actions"><button class="btn ok">begin again</button></div>`;
+        e.querySelector('.ok').onclick = () => location.reload();
+        placeTopCenter(e); makeDraggable(e); bringToFront(e);
+      }, 500);
+    }
+
+    function endGoodbye(){
+      if (STATE.ended) return;
+      STATE.ended = true; clearTimeout(idleTimer);
+      document.querySelectorAll('.popup').forEach(el => el.remove());
+      const e = document.createElement('div');
+      e.className = 'popup';
+      e.innerHTML = `
+        <div class="bar">goodbye</div>
+        <div class="msg"><div class="bye">:(</div></div>
+        <div class="actions"><button class="btn ok">begin again</button></div>`;
+      e.querySelector('.ok').onclick = () => location.reload();
+      placeCenter(e); makeDraggable(e); bringToFront(e);
+    }
+
+    function showStarvedNudge(){
+      const n = document.createElement('div');
+      n.className = 'popup';
+      n.innerHTML = `
+        <div class="bar">incomplete profile <button class="x" aria-label="close">\u00d7</button></div>
+        <div class="msg">i don\u2019t know who you are yet, so this reading is for no one in particular. give me your name and birthday and i\u2019ll make it feel like it\u2019s about you.</div>
+        <div class="actions"><button class="btn tell">complete profile</button></div>`;
+      n.querySelector('.x').onclick = () => n.remove();
+      n.querySelector('.tell').onclick = () => { n.remove(); spawnWelcome(null, true); };
+      placeTopCenter(n); makeDraggable(n);
+    }
+
+    /* welcome window */
+    const MAX_WELCOME = 6;
+    const welcomeWindows = new Set();
+
+    function spawnWelcome(at, focus){
+      const w = document.createElement('div');
+      const isFinal = (welcomeWindows.size + 1 >= MAX_WELCOME);
+      w.className = 'popup welcome' + (isFinal ? ' shouting' : '');
+      const wtitle = isFinal ? ':(' : '\u5409';
+      w.innerHTML = `
+        <div class="bar">
+          <span class="wtitle">${wtitle}</span>
+          <span class="controls">
+            <button class="ctl min" aria-label="minimize">_</button>
+            <button class="ctl max" aria-label="maximize">\u25a1</button>
+            <button class="ctl close" aria-label="close">\u00d7</button>
+          </span>
+        </div>
+        <div class="content">
+          <label>first name
+            <input class="w-name" autocomplete="given-name">
+          </label>
+          <label>birthday
+            <input class="w-birthday" type="date">
+          </label>
+          <label>what\u2019s on your mind lately?
+            <input class="w-concern" placeholder="(optional)">
+          </label>
+          <button class="btn reveal">reveal my luck</button>
+          <div class="hint">just keep pressing ok! <3</div>
+        </div>`;
+      welcomeWindows.add(w);
+      w.addEventListener('animationend', () => w.classList.remove('shudder'));
+
+      const denyClose = (spread) => {
+        w.classList.remove('shudder'); void w.offsetWidth; w.classList.add('shudder'); // re-trigger
+        if (spread && welcomeWindows.size < MAX_WELCOME){
+          const r = w.getBoundingClientRect();
+          spawnWelcome({ x: r.left + 30, y: r.top + 30 }, false);
+        }
+      };
+      w.querySelector('.close').onclick = () => denyClose(true); // × multiplies
+      w.querySelector('.min').onclick   = () => denyClose(false); // others deny
+      w.querySelector('.max').onclick   = () => denyClose(false);
+
+      w.querySelector('.reveal').onclick = () => {
+        const name = w.querySelector('.w-name').value.trim();
+        const bday = w.querySelector('.w-birthday').value.trim();
+        const concern = w.querySelector('.w-concern').value.trim();
+        // clean slate
+        document.querySelectorAll('.popup').forEach(el => { if (!welcomeWindows.has(el)) el.remove(); });
+        welcomeWindows.forEach(el => el.remove());
+        welcomeWindows.clear();
+        const s = $('#start'); if (s) s.remove();
+        clearTimeout(idleTimer);
+        startExperience(name, bday, concern);
+      };
+
+      if (at) placeAt(w, at.x, at.y); else placeCenter(w);
+      makeDraggable(w);
+      bringToFront(w);
+      if (focus) requestAnimationFrame(() => w.querySelector('.w-name').focus());
+      return w;
+    }
+
+    /* start fortune */
+    function startExperience(name, birthday, concern){
+      concern = (concern || '').trim();
+      RNG = mulberry32(xmur3((name || '') + '|' + (birthday || '') + '|' + concern)());
+
+      const starved = !name && !birthday;
+      let friendly;
+      if (starved){
+        friendly = starvedFortunes.map(f => ({ text: f.text, img: null, ominous: false }));
+      } else {
+        const built = buildPoolForUser(name, birthday);
+        const lead = [];                                   
+        if (built.monthNote) lead.push({ text: built.monthNote, img: null, ominous: false });
+        // concern echoes are NOT front-loaded — scattered through the deck below
+        const echoes = concern ? echoFortunes.map(t => ({
+          text: t.replaceAll('{concern}', concern).replaceAll('{name}', name || 'you'),
+          img: null, ominous: false
+        })) : [];
+
+        // fresh random subset of the good-luck fortunes (differs every visit), sized to leave room for the echoes
+        const fill = Math.max(0, SESSION_DECK - lead.length - echoes.length);
+        const body = shuffle(built.body.map(f => ({ ...f, ominous: false })), Math.random).slice(0, fill);
+        // splice each echo into a random position so they spread among the others, never grouped at the start
+        echoes.forEach(card => body.splice(Math.floor(Math.random() * (body.length + 1)), 0, card));
+
+        friendly = [...lead, ...body];
+      }
+
+      STATE.friendly = friendly;
+      STATE.friendlyI = 0;
+
+      STATE.ominous = ominousPool.map(t => ({
+        text: t.replaceAll('{name}', name || 'you').replaceAll('{concern}', concern || 'that'),
+        img: null, ominous: true
+      }));
+      STATE.omQueue = shuffle(STATE.ominous.map((_, i) => i));
+      STATE.omI = 0;
+
+      STATE.bad = badLuckPool.map(t => ({
+        text: t.replaceAll('{name}', name || 'you').replaceAll('{concern}', concern || 'that'),
+        img: null, ominous: true, bad: true
+      }));
+      STATE.badQueue = shuffle(STATE.bad.map((_, i) => i));
+      STATE.badI = 0;
+
+      // reset
+      STATE.attention = ATTN_START;
+      STATE.ended = false;
+
+      updateAtmosphere();
+      if (starved){ showStarvedNudge(); return; } // no data
+      resetIdle();
+      spawnNext();
+    }
+
+    spawnWelcome(null, true); // first window
+  </script>
+</body>
+</html>
