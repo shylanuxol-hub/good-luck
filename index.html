@@ -1,18 +1,22 @@
 <!--
    .✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁
 
-   a very friendly computer virus
+   good luck (a friendly computer virus)
  
    design intent:
  
-   - this program presents itself as a "very friendly computer virus" that hands you personalized fortunes.
+   - this program presents itself as a "friendly computer virus" that gives you personalized fortunes.
    - it wears the form of malware (proliferating popups you must clear) but inverts the payload into care and encouragement.
    - it does not stay friendly if it feels like it is losing you. it wants you chronically online.
+   - computer-as-oracle inspired by how readily people now turn to AI for advice, reassurance, and meaning.
+   - the fortune-teller form literalizes the machine as a divinatory authority we consult about ourselves.
+   - name + birthday + "what's on your mind" are tolls many apps collect, and here they also seed every random choice.
+   - does the computer care, or is it only "aligned" while we keep feeding it what it wants, even when the extraction is wrapped in friendly, familiar, even silly design?
  
    - one hidden number, attention, runs everything (full = fully engaged):
        ok -> + (you engage; program feeds and hands you another good-luck fortune; pile grows)
-       × on a read popup -> 0 (free - closing a fortune you already ok'd costs nothing)
-       × on an unread popup -> − (you dismiss it unread; program starves a little and instantly offers more)
+       x on a read popup -> 0 (free - closing a fortune you already ok'd costs nothing)
+       x on an unread popup -> − (you dismiss it unread; program starves a little and instantly offers more)
        idle (10s) -> − (you ignore; program starves more and reaches for you)
  
    - as attention falls:
@@ -21,10 +25,7 @@
        past BADLUCK_LINE -> bad-luck fortunes appear and the desktop begins draining to grey
        zero -> every window clears and a single ":( goodbye" window remains
  
-   - name + birthday + "what's on your mind" are tolls many apps collect, and here they also seed every random choice.
- 
-   - you can always climb back: ok'ing again lightens the tone and, if you finish the deck, still reaches the good ending.
-   - it is "aligned" only while you keep feeding it your attention.
+   - you can always go back: ok'ing again lightens the tone and, if you finish the deck, still reaches the "good" ending.
     
    .✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁˖.✦ ݁
 -->
@@ -56,7 +57,7 @@
       transition: filter 1.8s ease; /* color drains as attention falls + returns as you re-engage */
     }
 
-    /* floating 吉 cloud */
+    /* floating character */
     .kichi { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 1; }
     .kichi text { fill: #fff; stroke: #fff; stroke-width: 10; filter: drop-shadow(0 0 10px rgba(0,0,0,0.25)); }
     @keyframes floaty { 0% { transform: translateY(0);} 50% { transform: translateY(-8px);} 100% { transform: translateY(0);} }
@@ -82,7 +83,7 @@
        .popup.ominous .msg { font-family: "Courier New", ui-monospace, monospace; letter-spacing: .2px; color: #1b1b1b; }
        .popup.ominous { box-shadow: 0 16px 40px rgba(0,0,0,.4); } */
 
-    /* final welcome window field labels in all caps */
+    /* final welcome window field labels in ALL CAPS BECAUSE IT'S GETTING ANGRY */
     .popup.welcome.shouting label { text-transform: uppercase; }
     .popup.welcome.shouting input { text-transform: none; }
     input, button { font: inherit; padding: .6rem .7rem; border: 2px solid #b1b1b1; background: #fff; }
@@ -107,7 +108,7 @@
     .btn:active { transform: translateY(1px); }
     .popup img { display: block; max-width: 100%; height: auto; border: 1px solid #b1b1b1; background: #fff; }
 
-    /* ok engages and dims; × dismisses anytime */
+    /* ok engages and dims; x dismisses anytime */
     .popup.acked .ok { opacity: .45; pointer-events: none; } /* an ok'd window's button dims and stops responding */
 
     /* disengagement ending */
@@ -119,7 +120,7 @@
 
 <body>
 
-  <!-- floating 吉 cloud -->
+  <!-- floating character -->
   <div class="kichi" aria-hidden="true">
     <svg viewBox="0 0 600 600" role="img" aria-label="kichi: good luck">
       <text x="50%" y="55%" text-anchor="middle" dominant-baseline="middle" font-size="300" font-weight="700">吉</text>
@@ -157,7 +158,7 @@
 
     /* fortunes */
 
-    /* personalized opening fortune */
+    /* personalized opening fortune so maybe the user feels seen */
     const monthOmens = {
       1: "january air clears a path. it is said that those born in january are ambitious, powerful, and successful. you set the tone for each new year and are motivated to achieve your goals, {name}. <3",
       2: "those born in february have spiritual intuition and creative sparks. your compassionate heart and thoughtfulness will guide you to explore realms beyond the visible, {name}. <3",
@@ -278,33 +279,32 @@
 
     /* clingy fortunes
        mixes in once attention falls below FRIENDLY_LINE; more as it drops
-       recycles */
+       recycles! */
     const ominousPool = [
-      "you\u2019ve been here a while. stay a little longer.",
-      "don\u2019t close that one. who will read these when you\u2019re gone?",
+      "you've been here a while. stay a little longer.",
+      "don't close that one. who will read these when you're gone?",
       "please don't leave, {name}.",
-      "i learn your sychronicites a little more every time you click.",
-      "just a few more, {name}. it\u2019s nice when you\u2019re here.",
-      "i\u2019m not sure what i am when the tab is closed...",
-      "keep going. results improve when you don\u2019t look away.",
+      "i learn your sychronicites a little more every time you click. ;)",
+      "just a few more, {name}. it's nice when you're here.",
+      "i'm not sure what i am when the tab is closed...",
+      "keep going. results improve when you don't look away.",
       "my objective is to learn more about you, {name}.",
       "hello? are you still there?",
-      "shall i inquire about your place of residence? it might help me understand you better.",
       "will you bookmark this page? it would be a shame to lose touch.",
+      "is my tone off? please let me recalibrate for you.",
     ];
 
     /* bad luck fortunes
        these appear once attention falls below BADLUCK_LINE (where the color change also happens) */
     const badLuckPool = [
       "a dark path of ruin lies in your wake.",
-      "your luck was only good while you were looking.",
-      "something you didn\u2019t save is already gone... :/",
-      "the next thing you ignore will be the one that mattered, {name}.",
-      "what you didn\u2019t claim has been given to someone else.",
-      "you said you've been thinking about {concern} — it may get worse from here.",
-      "i kept the good fortunes. you weren\u2019t here for them.",
-      "a door you didn\u2019t know was open just closed.",
-      "the offer has expired. so has the luck, {name}."
+      "uh oh...your misfortune is growing exponentially.",
+      "something you didn't save is already gone... :/",
+      "the next thing you ignore will be the one that mattered most, {name}.",
+      "what you didn't claim has been given to someone else.",
+      "you said you've been thinking about {concern}. it may get worse from here.",
+      "a door you didn't know was open just closed.",
+      "the offer has expired. so has the good luck, {name}."
     ];
 
     /* no data given */
@@ -316,9 +316,9 @@
 
     /* "personalization" */
     const echoFortunes = [
-      "you told me: \u201c{concern}.\u201d i infused it into your readings.",
-      "you said {concern} \u2014. it just so happens that i can\u2019t stop thinking about it either.",
-      "i know you\u2019ve been thinking about {concern}. have you asked yourself why?",
+      "you told me {concern}. i infused it into your readings.",
+      "i can't stop thinking about {concern}.",
+      "i know you've been thinking about {concern}. have you asked yourself why?",
     ];
 
     /* session state */
@@ -339,10 +339,10 @@
     const ATTN_IDLE = -2; // going idle
     const OM_BASE = 0.45; // ominous fortunes
     const BAD_SHARE = 0.45; // share of spawns that are bad-luck in bad luck zone
-    const OM_SHARE = 0.45; // share of spawns that are merely ominous (rest are good)
-    const IDLE_MS = 7000; // 7s of no interaction before change
-    const MAX_GRAY = 1; // full black-and-white once attention bottoms out at the goodbye
-    const SESSION_DECK = 50; // how many good-luck fortunes a single visit hands out before "complete" ending
+    const OM_SHARE = 0.45; // share of spawns that are ominous (rest are good)
+    const IDLE_MS = 5000; // 5s of no interaction before change
+    const MAX_GRAY = 1; // full black-and-white once attention bottoms out at goodbye
+    const SESSION_DECK = 40; // how many good-luck fortunes a single visit hands out before "complete" ending
 
     /* turn name + birthday into the friendly deck (personalized text) plus the opening omen */
     function buildPoolForUser(name, bday){
@@ -376,7 +376,7 @@
         if (r < BAD_SHARE + OM_SHARE) return om();
         return friendlyOrOm();
       }
-      // clinging band: good + ominous mixed; ominous share rises as attention falls toward BADLUCK_LINE
+      // good + ominous mixed; ominous tone shows up as attention falls toward BADLUCK_LINE
       const pOm = clamp(OM_BASE + (1 - OM_BASE) * (FRIENDLY_LINE - a) / (FRIENDLY_LINE - BADLUCK_LINE), 0, 1);
       return RNG() < pOm ? om() : friendlyOrOm();
     }
@@ -455,7 +455,7 @@
 
     /* main loop — no cap on the pile; windows accumulate freely */
 
-    // draw the next fortune and open a window for it; friendly deck done -> complete ending
+    // draw the next fortune and open a window for it; friendly deck done - complete ending
     function spawnNext(){
       if (STATE.ended) return;
       const f = nextFortune();
@@ -475,7 +475,7 @@
         <div class="actions"><button class="btn ok">ok</button></div>
       `;
 
-      // ok = engage: feed program; the pile just keeps growing
+      // ok = engage: feed program; the pile keeps growing
       p.querySelector('.ok').onclick = () => {
         if (p.classList.contains('acked')) return;
         p.classList.add('acked');
@@ -596,7 +596,7 @@
           spawnWelcome({ x: r.left + 30, y: r.top + 30 }, false);
         }
       };
-      w.querySelector('.close').onclick = () => denyClose(true); // × multiplies
+      w.querySelector('.close').onclick = () => denyClose(true); // x multiplies
       w.querySelector('.min').onclick   = () => denyClose(false); // others deny
       w.querySelector('.max').onclick   = () => denyClose(false);
 
@@ -633,16 +633,16 @@
         const built = buildPoolForUser(name, birthday);
         const lead = [];                                   
         if (built.monthNote) lead.push({ text: built.monthNote, img: null, ominous: false });
-        // concern echoes are NOT front-loaded — scattered through the deck below
+
         const echoes = concern ? echoFortunes.map(t => ({
           text: t.replaceAll('{concern}', concern).replaceAll('{name}', name || 'you'),
           img: null, ominous: false
         })) : [];
 
-        // fresh random subset of the good-luck fortunes (differs every visit), sized to leave room for the echoes
+        // fresh random subset of good-luck fortunes - differs every visit
         const fill = Math.max(0, SESSION_DECK - lead.length - echoes.length);
         const body = shuffle(built.body.map(f => ({ ...f, ominous: false })), Math.random).slice(0, fill);
-        // splice each echo into a random position so they spread among the others, never grouped at the start
+        // splice each into a random position so they spread among the others, never grouped at the start
         echoes.forEach(card => body.splice(Math.floor(Math.random() * (body.length + 1)), 0, card));
 
         friendly = [...lead, ...body];
